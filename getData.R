@@ -10,9 +10,10 @@ library(purrr)
 
 
 # Build a BIS SDMX data URL
-# - dataflow: short id like "WS_EER" (even if BIS shows "BIS,WS_EER,1.0")
+# - dataflow: short id like "WS_EER" 
 # - series_key: e.g. "M.R.N.CA"
 # - start, end: "YYYY-MM" or "YYYY" (optional)
+
 bis_build_url <- function(dataflow, series_key, start = NULL, end = NULL) {
   # BIS commonly uses this SDMX REST v1 path:
   #   https://stats.bis.org/api/v1/data/{flow}/{key}
@@ -59,8 +60,6 @@ bis_get_series <- function(dataflow, series_key, start = NULL, end = NULL) {
   out
 }
 
-
-
 bis_get_many <- function(dataflow, series_keys, start = NULL, end = NULL, .id = "series_key") {
   series_keys %>%
     set_names() %>%
@@ -93,21 +92,6 @@ parse_period <- function(x) {
   parsed
 }
 
-
-# Canada REER Narrow (Real, Monthly)
-can_reer <- bis_get_series(
-  dataflow   = "WS_EER",
-  series_key = "M.R.N.CA",
-  start      = "1964-01",   # optional
-  end        = "2025-09"    # optional
-)
-
-dplyr::glimpse(can_reer)
-head(can_reer, 10)
-tail(can_reer, 5)
-
-
-
 # Define BIS dataflow
 dataflow <- "WS_EER"
 
@@ -128,37 +112,75 @@ series_keys <- c(
 )
 
 # Download all in one go
-reer_many <- bis_get_many(
+reer <- bis_get_many(
   dataflow   = dataflow,
-  series_keys = series_keys,
-  start      = "2000-01"   # optional: only from 2000 onwards
+  series_keys = series_keys
 )
 
-# Inspect structure
-dplyr::glimpse(reer_many)
+# Create wide dataframe with one column per country
+reer <- reer %>%
+  # Extract last two letters from series_key (e.g. "M.R.B.TH" → "TH")
+  mutate(country = str_extract(series_key, "[A-Z]{2}$")) %>%
+  
+  # Keep only relevant columns
+  select(date, country, value) %>%
+  
+  # Pivot to wide format
+  pivot_wider(names_from = country, values_from = value) %>%
+  
+  # Sort columns alphabetically (optional)
+  select(date, sort(tidyselect::peek_vars()))
+
+rm(list=setdiff(ls(), "reer"))
 
 
-summary(reer_many)
+# Define BIS dataflow
+dataflow <- "WS_LONG_CPI" 
 
-install.packages("ggplot2")
-library(ggplot2)
+series_keys <- c(
+  "M.CN.771",    
+  "M.BR.771", 
+  "M.IN.771", 
+  "M.KR.771", 
+  "M.ZA.771", 
+  "M.SA.771", 
+  "M.MX.771", 
+  "M.AE.771", 
+  "M.MY.771", 
+  "M.ID.771", 
+  "M.PL.771", 
+  "M.TH.771" 
+)
+
+# Download all in one go
+cpi <- bis_get_many(
+  dataflow   = dataflow,
+  series_keys = series_keys,
+  start = "1995-01"
+)
+
+# 1) Keep only "normal, final" points (adjust if you want a different rule)
+#    OBS_STATUS: "A" = normal; OBS_CONF: "F" = final
+cpi_clean <- cpi %>%
+  filter(OBS_STATUS == "A", OBS_CONF == "F") %>%
+  # If there are still duplicates per (date, country), pick one deterministically
+  group_by(date, REF_AREA) %>%
+  summarise(value = first(na.omit(value)), .groups = "drop")
+
+# 2) Pivot to wide: date + one column per country (2-letter code from REF_AREA)
+cpi <- cpi_clean %>%
+  rename(country = REF_AREA) %>%
+  pivot_wider(names_from = country, values_from = value) %>%
+  select(date, sort(names(.)[names(.) != "date"])) 
+
+# Done: cpi_wide has 1 + (#countries) columns
 
 
-ggplot(reer_many, aes(x = date, y = value, color = series_key)) +
-  geom_line(size = 0.9) +
-  theme_minimal(base_size = 13) +
-  labs(
-    title = "Real Effective Exchange Rate",
-    subtitle = "Broad Basket, 2020 = 100",
-    caption = "Source: Bank of Internationas Settlements",
-    x = NULL,
-    y = NULL,
-    color = "Series"
-  ) +
-  theme(
-    plot.title.position = "plot",
-    legend.position = "top",
-    legend.title = element_blank() 
-  )
+rm(list=setdiff(ls(), c("reer", "cpi")))
+
+
+
+
+
 
 
