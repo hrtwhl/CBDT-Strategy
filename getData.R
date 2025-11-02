@@ -1,3 +1,11 @@
+#--------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------
+# REER AND CPI FROM BANK OF INTERNATIONAL SETTLEMENTS
+#--------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------
+
+
+
 # Install once if needed
 install.packages(c("readsdmx", "dplyr", "tidyr", "stringr", "lubridate", "purrr"))
 
@@ -180,7 +188,27 @@ rm(list=setdiff(ls(), c("reer", "cpi")))
 
 
 
+#--------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------
+# FRED
+#--------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------
 
+# install.packages(c("fredr", "tidyverse", "timetk", "lubridate", "zoo"))
+library(fredr)
+library(tidyverse)
+library(timetk)
+library(lubridate)
+library(zoo)
 
+# ------------------------------------------------------------
+# FRED API KEY
+# (A) temporary for this session:
+# fredr_set_key("YOUR_FRED_API_KEY")
 
-
+# (B) or store in .Renviron so it loads automatically:
+# usethis::edit_r_environ()
+# Add a line: FRED_API_KEY=your_key_here
+# Then restart R:
+fredr_set_key(Sys.getenv("FRED_API_KEY"))
+# ------------------------------------------------------------
