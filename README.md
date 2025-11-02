@@ -6,19 +6,4 @@ In other words: do not guess the future, compare with the past.
 
 ES adapts this principle to data. At each evaluation point, we represent a market with a set of features: price dynamics, volatility, drawdowns, and macro changes (unemployment, term spread, CPI, industrial production, etc.). If today looks statistically similar to some past cluster of weeks, that fact alone carries information. In finance, where regimes shift and models decay, this parsimony is a strength. Where many machine learning models try to generalize from millions of samples, ES is content with “eyeballing” the closest cases.
 
-## Countries
-China, Taiwan, Indien, Südkorea, Brasilien, Südafrika, Saudi-Arabien, Mexiko, Vereinigte Arabische Emirate, Malaysia, Indonesien, Polen and Thailand.
-
-## Missing Data
-
-REER
-- Taiwan
-
-IP
-- South Africa
-- Saudi Arabia
-- UAE
-- Thailand
-- Pol
-
-
+I will expand the README as soon as I am done with the project. 
