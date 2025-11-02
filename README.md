@@ -12,7 +12,7 @@ See [Macro Trend](https://substack.com/home/post/p-174152862) by Moritz Heiden: 
 | Country | ETF | TER | Acc/Dis | ISIN | YF Ticker | Data Since | OeKB |
 |---------|---------|---------|---------|---------|---------|---------|---------|
 | China | Xtrackers MSCI China UCITS ETF | 0.65% | Acc | LU0514695690 | XCS6.DE | 10/4/11 | Yes |
-| Taiwan | Xtrackers MSCI Taiwan UCITS ETF | 0.65% | Acc | LU0292109187 | XMTW.MI | 1/2/08 | Yes |
+| Taiwan | iShares MSCI Taiwan UCITS ETF | 0.74% | Dis | IE00B0M63623 | ITWN.MI | 1/1/08 | Yes |
 | India | iShares MSCI India UCITS ETF (Acc) | 0.65% | Acc | IE00B2QP8B85 | QDV5.DE | 5/31/18 | Yes |
 | South Korea | Xtrackers MSCI Korea UCITS ETF 1C | 0.45% | Acc | LU0292100046 | XMKO.MI | 1/1/08 | Yes |
 | Brazil | Xtrackers MSCI Brazil UCITS ETF | 0.25% | Acc | LU0292109344 | DBX6.DE | 2/6/09 | Yes |
@@ -20,12 +20,10 @@ See [Macro Trend](https://substack.com/home/post/p-174152862) by Moritz Heiden: 
 | South Africa | iShares MSCI South Africa UCITS ETF | 0.65% | Acc | IE00B52XQP83 | SRSA.MI | 7/8/15 | Yes |
 | Mexico | Xtrackers MSCI Mexico UCITS ETF | 0.65% | Acc | LU0476289466 | XMEX.MI | 7/26/10 | Yes |
 | Malaysia | Xtrackers MSCI Malaysia UCITS ETF 1C | 0.50% | Acc | LU0516494370 | XCS3.DE | 8/24/11 | Yes |
-| Indonesia | HSBC MSCI Indonesia UCITS ETF USD | 0.50% | Dis | IE00B46G8275 | H47T.DE | 3/30/11 | Yes |
 | Poland | iShares MSCI Poland UCITS ETF USD (Acc) | 0.74% | Acc | IE00B4M7GH52 | IBCJ.DE | 1/21/11 | Yes |
-| Thailand | Xtrackers MSCI Thailand UCITS ETF 1C | 0.50% | Acc | LU0516494701 | XCS4.MI | 5/9/11 | Yes |
+| Thailand | Xtrackers MSCI Thailand UCITS ETF 1C | 0.50% | Acc | LU0516494701 | XCS4.DE | 8/19/11 | Yes |
 | Türkiye | iShares MSCI Turkey UCITS ETF | 0.74% | Dis | IE00B1FZS574 | ITKY.MI | 1/10/08 | Yes |
-| Philippines | Xtrackers MSCI Philippines UCITS ETF 1C | 0.65% | Acc | LU0592215043 | XQPQ.DE | 4/12/11 | Yes |
-| Hongkong | UBS MSCI Hong Kong UCITS ETF | 0.45% | Dis | LU1169827224 | HKDE.MI | 7/7/15 | Yes |
+| Philippines | Xtrackers MSCI Philippines UCITS ETF 1C | 0.65% | Acc | LU0592215043 | XPQP.F | 8/23/12 | Yes |
 | Vietnam | Xtrackers Vietnam Swap UCITS ETF | 0.85% | Acc | LU0322252924 | XFVT.DE | 1/15/2008 | Yes |
 
 ### Regional / Broad EM Equity ETFs
