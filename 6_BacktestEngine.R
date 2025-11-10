@@ -167,9 +167,9 @@ returns_matrix <- as.matrix(daily_returns_aligned[, -1])
 weights_matrix <- as.matrix(weights_aligned[, -1])
 
 # --- NEW FIX: This is the most critical part ---
-# We must treat NA returns (non-trading days) as 0 for P/L calculation.
-# NA * 0 (weight) should be 0, not NA.
-returns_matrix[is.na(returns_matrix)] <- 0
+# We must treat NA, NaN, and Inf returns as 0 for P/L calculation.
+# !is.finite() catches all of them.
+returns_matrix[!is.finite(returns_matrix)] <- 0
 # --- END NEW FIX ---
 
 # Calculate row-wise sum of (weight * return)

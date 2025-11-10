@@ -192,14 +192,23 @@ evaluate_analogues <- function(analogue_outcomes_df,
                         (stats_12wk$confidence * weights["w_12wk"])
                         
   # 3. Apply the "Alive/Dead" filter
-  is_alive <- (blended_mean > min_mean) & (blended_confidence > min_confidence)
+  
+  # --- NEW ROBUSTNESS CHECK ---
+  # Check if stats are valid before comparing
+  if (is.na(blended_mean) || is.na(blended_confidence)) {
+    is_alive <- FALSE # Default to "Dead" if stats are bad
+  } else {
+    is_alive <- (blended_mean > min_mean) & (blended_confidence > min_confidence)
+  }
+  # --- END NEW FIX ---
+  
   signal <- ifelse(is_alive, "Alive", "Dead")
   
   return(list(
-    signal = signal,
+    signal = unname(signal),
     n_analogues = n_found,
-    blended_mean = blended_mean,
-    blended_confidence = blended_confidence,
+    blended_mean = unname(blended_mean),
+    blended_confidence = unname(blended_confidence),
     stats_4wk = stats_4wk,
     stats_8wk = stats_8wk,
     stats_12wk = stats_12wk
