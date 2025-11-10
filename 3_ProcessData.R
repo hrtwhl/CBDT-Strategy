@@ -1,7 +1,7 @@
 # Load Data and clean workspace
-source("getETFData.R")
-source("getMacroData.R")
-rm(list=setdiff(ls(), c("assets_long", "assets_wide", "macro_long", "macro_wide")))
+source("1_getETFData.R")
+source("2_getMacroData.R")
+rm(list=setdiff(ls(), c("assets_long", "assets_wide", "macro_long", "macro_wide", "etfs")))
 
 
 # --- Step 1: Data Pre-processing (The Weekly "Master Table") ---

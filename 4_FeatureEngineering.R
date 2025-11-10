@@ -60,6 +60,7 @@ zscore_window <- 52 # 1 year
 # --- THIS IS THE CORRECTED FUNCTION ---
 # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 # Helper function for a rolling z-score
+
 rolling_zscore <- function(x, window = zscore_window) {
   rollapplyr(
     x,
@@ -177,6 +178,7 @@ cat("Final Aligned Outcome Table Dimensions:", dim(outcome_table_aligned), "\n")
 
 cat("\nDate Range for Model-Ready Data:\n")
 cat("Start:", as.character(min(feature_table_aligned$date)), "\n")
+
 cat("End:  ", as.character(max(feature_table_aligned$date)), "\n")
 
 # 2.8 Save final model-ready tables
