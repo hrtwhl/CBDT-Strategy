@@ -15,11 +15,11 @@ etfs <- tribble(
   # --- Single-Country EM Equity ETFs ---
   "Single Country", "China",        "XCS6.DE",
   "Single Country", "Taiwan",       "ITWN.MI",
-  "Single Country", "India",        "QDV5.DE",
+  #"Single Country", "India",        "QDV5.DE",
   "Single Country", "South Korea",  "XMKO.MI",
   "Single Country", "Brazil",       "DBX6.DE",
-  "Single Country", "Saudi Arabia", "IUSV.DE",
-  "Single Country", "South Africa", "SRSA.MI",
+  #"Single Country", "Saudi Arabia", "IUSV.DE",
+  #"Single Country", "South Africa", "SRSA.MI",
   "Single Country", "Mexico",       "XMEX.MI",
   "Single Country", "Malaysia",     "XCS3.DE",
   "Single Country", "Poland",       "IBCJ.DE",
@@ -28,13 +28,13 @@ etfs <- tribble(
   "Single Country", "Philippines",  "XPQP.F",
   "Single Country", "Vietnam",      "XFVT.DE",
   # --- Regional / Broad EM Equity ETFs ---
-  "Regional/Broad", "EM broad",     "IS3N.DE",
+  "Regional/Broad", "EM broad",     "EUNM.DE",
   "Regional/Broad", "EM Asia",      "CSEMAS.MI",
   "Regional/Broad", "EM LatAm",     "IUSC.DE",
   "Regional/Broad", "EM Small Cap", "EUNI.DE",
   # --- EM Factor / Style ETFs ---
-  "Factor",         "EM Value",     "5MVL.DE",
-  "Factor",         "EM Min Vol",   "EUNZ.F",
+  #"Factor",         "EM Value",     "5MVL.DE",
+  #"Factor",         "EM Min Vol",   "EUNZ.F",
   # --- EM Bond ETFs ---
   "Bond",           "EM Sov USD",   "IUS7.DE",
   "Bond",           "EM Local",     "IUSP.DE",

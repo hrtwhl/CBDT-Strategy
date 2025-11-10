@@ -4,10 +4,9 @@ Trading strategy based on Empirical Similarity (ES), an offshoot of Case Based D
 
 See [Macro Trend](https://substack.com/home/post/p-174152862) by Moritz Heiden: CBDT was introduced in the 1990s by Gilboa & Schmeidler as a model of decision making under uncertainty. Instead of relying on subjective probabilities, CBDT posits that people recall past situations that look similar to today’s and judge actions based on how well they worked back then. In other words: do not guess the future, compare with the past. ES adapts this principle to data. At each evaluation point, we represent a market with a set of features: price dynamics, volatility, drawdowns, and macro changes (unemployment, term spread, CPI, industrial production, etc.). If today looks statistically similar to some past cluster of weeks, that fact alone carries information. In finance, where regimes shift and models decay, this parsimony is a strength. Where many machine learning models try to generalize from millions of samples, ES is content with “eyeballing” the closest cases.
 
-
 ## Asset Universe
 
-### Single-Country EM Equity ETFs 
+### Single-Country EM Equity ETFs
 
 | Country | ETF | TER | Acc/Dis | ISIN | YF Ticker | Data Since | OeKB |
 |---------|---------|---------|---------|---------|---------|---------|---------|
@@ -30,7 +29,7 @@ See [Macro Trend](https://substack.com/home/post/p-174152862) by Moritz Heiden: 
 
 | Region | ETF | TER | Acc/Dis | ISIN | YF Ticker | Data Since | OeKB |
 |---------|---------|---------|---------|---------|---------|---------|---------|
-| EM broad | iShares Core MSCI Emerging Markets IMI UCITS ETF (Acc) | 0.18% | Acc | IE00BKM4GZ66 | IS3N.DE | 6/11/2014 | Yes |
+| EM broad | iShares Core MSCI Emerging Markets IMI UCITS ETF (Acc) | 0.18% | Acc | IE00BKM4GZ66 | EUNM.DE | 10/20/2009 | Yes |
 | EM Asia | iShares MSCI EM Asia UCITS ETF (Acc) | 0.20% | Acc | IE00B5L8K969 | CSEMAS.MI | 8/10/2010 | Yes |
 | EM Latin America | iShares MSCI EM Latin America UCITS ETF (Dist) | 0.20% | Dis | IE00B27YCK28 | IUSC.DE | 3/27/2008 | Yes |
 | EM Small Cap | iShares MSCI Emerging Markets Small Cap UCITS ETF | 0.74% | Dis | IE00B3F81G20 | EUNI.DE | 3/5/2009 | Yes |
@@ -49,9 +48,5 @@ See [Macro Trend](https://substack.com/home/post/p-174152862) by Moritz Heiden: 
 | EM Sovereign USD Bonds | iShares J.P. Morgan USD Emerging Markets Bond UCITS ETF (Dist) | 0.45% | Dis | IE00B2NPKV68 | IUS7.DE | 3/20/2009 | Yes |
 | EM Local Currency Bonds | iShares J.P. Morgan EM Local Govt Bond ETF | 0.50% | Dis | IE00B5M4WH52 | IUSP.DE | 8/15/2011 | Yes |
 | EM Corporate Bonds | iShares J.P. Morgan USD EM Corporate Bond UCITS ETF (Dist) | 0.50% | Dis | IE00B6TLBW47 | IS0Q.DE | 4/17/2012 | Yes |
-
-
-
-
 
 ***I will expand the README as soon as I am done with the project.***
