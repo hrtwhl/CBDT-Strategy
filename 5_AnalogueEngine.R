@@ -11,7 +11,7 @@
 # =========================================================
 
 # --- 1. Load Data and Libraries ---
-rm(list=setdiff(ls(), c("etfs"))) # Keep etfs list
+#rm(list=setdiff(ls(), c("etfs"))) # Keep etfs list
 source("1_getETFData.R") # Load etfs list again if cleared
 
 # Load required libraries
@@ -64,8 +64,8 @@ config <- list(
   # --- Backtest Timing ---
   # We need a minimum history to find analogues
   # 156 is 3 years, 104 is 2 years
-  #min_history_wks = 156, 
-  min_history_wks = 104,
+  min_history_wks = 156, 
+  #min_history_wks = 104,
   # And a date to start the backtest (must be after
   # the first date in standardized_feature_table)
   backtest_start_date = as.Date("2010-01-01")
@@ -293,3 +293,4 @@ if (nrow(final_backtest_signals) > 0) {
   cat("2. 'min_history_wks' being too large.\n")
   cat("3. No assets having data.\n")
 }
+

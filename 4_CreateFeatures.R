@@ -77,7 +77,15 @@ cat("Z-Score Rolling Window:", config$zscore_rolling_window, "weeks\n\n")
 
 # Get asset and macro ticker lists for processing
 asset_tickers <- etfs$asset
-macro_tickers <- c(names(fred_series), yf_futures$series)
+# Get macro tickers from the master table, excluding date and asset tickers
+macro_tickers <- setdiff(
+  colnames(master_table_weekly),
+  c("date", asset_tickers)
+)
+
+
+cat("Identified", length(macro_tickers), "macro tickers.\n")
+
 
 # =========================================================
 # --- 3. Create Price Dynamics Features (Asset-Specific) ---
@@ -170,7 +178,11 @@ macro_changes <- map(config$macro_chg_lookbacks, ~ {
       across(everything(),
              ~ .x - lag(.x, lookback),
              .names = "{.col}_chg_{lookback}w")
-    )
+    ) %>%
+    # --- !! FIX !! ---
+    # Only keep the *new* columns we just created.
+    # This prevents the duplicate column names.
+    select(ends_with(paste0("_chg_", lookback, "w")))
 }) %>%
   bind_cols() # Combine the dataframes (chg_13w, chg_52w, ...)
 
@@ -242,9 +254,15 @@ rolling_zscore <- function(x, window_size = 156) {
   # Calculate Z-score
   z <- (x - rolling_mean) / rolling_sd
 
-  # Handle cases where rolling_sd is 0 (returns NaN, which is correct)
-  # Infinite can happen if x == rolling_mean and sd == 0
-  z[is.infinite(z)] <- NA
+  # ============================================================
+  # --- FIX: Handle NaN and Infinite values ---
+  # If rolling_sd is 0, z becomes NaN (if x == mean) or
+  # Inf (if x != mean).
+  # In both cases, the deviation is 0, so Z-score should be 0.
+  # ============================================================
+  z[is.nan(z)] <- 0
+  z[is.infinite(z)] <- 0
+  
   return(z)
 }
 
@@ -266,12 +284,13 @@ standardized_feature_table <- feature_table_unstandardized %>%
   ungroup() %>%
   # The rolling z-score with .complete=TRUE will create NAs
   # for the initial "warm-up" period (first 3 years).
-  # na.omit() will also drop any rows where sd=0 (NaNs).
+  # na.omit() will now drop *only* the warm-up NAs,
+  # not the NaN rows (which are now 0).
   na.omit()
 
 cat("--- Standardized Feature Table (Rolling Z-Score) --- \n")
 cat("Final Dimensions:", dim(standardized_feature_table), "\n")
-cat("Date Range:", as.character(min(standardZized_feature_table$date)),
+cat("Date Range:", as.character(min(standardized_feature_table$date)),
     "to", as.character(max(standardized_feature_table$date)), "\n\n")
 
 # =========================================================
@@ -294,5 +313,5 @@ save(
 cat(
   "--- Script 4 Complete --- \n",
   "'standardized_feature_table.RData' and\n",
-  "'feature_table_unstandardIZED.RData' are saved.\n"
+  "'feature_table_unstandardized.RData' are saved.\n"
 )
