@@ -36,8 +36,8 @@ cat("Loaded 'master_table_weekly' with", nrow(master_table_weekly), "rows.\n\n")
 
 config <- list(
   # --- Price Dynamics Lookbacks (in weeks) ---
-  price_mom_lookbacks = c(4, 12, 26, 52),
-  price_vol_lookbacks = c(12, 52),
+  price_mom_lookbacks = c(12, 52),
+  price_vol_lookbacks = 52,
   price_dd_lookback = 52,
   
   # --- NEW: Price Z-Score Lookback ---
@@ -237,3 +237,4 @@ cat(
   "'standardized_feature_table.RData' and\n",
   "'feature_table_unstandardized.RData' are saved.\n"
 )
+
