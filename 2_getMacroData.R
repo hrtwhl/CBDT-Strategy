@@ -13,48 +13,22 @@ invisible(lapply(required, library, character.only = TRUE))
 source("APIKey.R")
 
 # =========================================================
-# FRED SERIES (CORRECTED - CORE 6 ONLY)
+# FRED SERIES (THE "CORE 6" MACRO LIST)
 # =========================================================
+# This list is based on our analysis of Heiden/AQR/Man
+# and designed for low correlation and high EM-relevance.
 fred_series <- c(
-  # 1) USD & FX
-  #usd_broad_index   = "DTWEXBGS",
-  #usd_em_index      = "DTWEXEMEGS",
-  #usd_afe_index     = "DTWEXAFEGS",
-
-  # 2) U.S. Rates & Curve
-  #fed_funds_rate    = "FEDFUNDS",
+  # 1. Monetary Policy (AQR/Heiden Theme)
   yield_2y          = "DGS2",
-  #yield_10y         = "DGS10",
-  term_spread_10y2y = "T10Y2Y",
-  #term_spread_10y3m = "T10Y3M",
-  breakeven_infl_10y= "T10YIE",
-  #infl_exp_5y5y     = "T5YIFR",
-  #real_yield_10y    = "DFII10",
-
-  # 3) Risk Appetite / Credit
-  #vix_index         = "VIXCLS",
+  
+  # 2. Risk Appetite (AQR/Heiden Theme)
   hy_spread         = "BAMLH0A0HYM2",
-  #bbb_spread        = "BAMLC0A4CBBB",
-  #stl_fsi           = "STLFSI4",
-  #chicago_fci       = "NFCI",
-
-  # 5) Global / China Growth
-  #china_cli         = "CHNLOLITOAASTSAM",
-  #g7_cli            = "G7LOLITOAASTSAM",
-  #oecd_cli          = "OECDLOLITOTRGYSAM",
-
-  # 6) U.S. Real Activity & Inflation
-  industrial_prod   = "INDPRO",
-  #nonfarm_payrolls  = "PAYEMS",
-  unemployment_rate = "UNRATE"
-  #initial_claims    = "ICSA",
-  #continuing_claims = "CCSA",
-  #real_retail_sales = "RRSFS",
-  #cpi_headline      = "CPIAUCSL",
-  #cpi_core          = "CPILFESL",
-  #ppi_all_commodities = "PPIACO",
-  #pce_index         = "PCEPI",
-  #pce_core          = "PCEPILFE"
+  
+  # 3. Inflation (AQR/Heiden Theme)
+  breakeven_infl_10y= "T10YIE",
+  
+  # 4. Currency / Trade (AQR/Heiden Theme)
+  usd_broad_index   = "DTWEXBGS"
 )
 
 # Helper: download FRED as long table
@@ -71,12 +45,13 @@ get_fred_data <- function(named_series, start_date = "2000-01-01", freq = NULL) 
 }
 
 # =========================================================
-# YAHOO FUTURES (full history, daily CLOSE)
+# YAHOO FUTURES (THE "CORE 6" MACRO LIST)
 # =========================================================
-# Tickers per your list; Gold assumed GC=F
+# 5. Global Growth (Man Group Theme)
+# 6. Inflation Shock (Man Group Theme)
 yf_futures <- tibble::tibble(
-  yf = c("GD=F", "CL=F", "HG=F", "GC=F"),
-  series = stringr::str_replace(yf, "=F$", "")   # drop '=F' -> CL, HG, GD, GC
+  yf = c("HG=F", "CL=F"),
+  series = c("Copper", "Oil")   # Clean names for the series
 )
 
 get_yahoo_close <- function(tickers_tbl) {
@@ -95,17 +70,16 @@ get_yahoo_close <- function(tickers_tbl) {
 # =========================================================
 # DOWNLOAD & BUILD FINAL TABLES
 # =========================================================
-# 1) FRED
+# 1) FRED (4 series)
 fred_long <- get_fred_data(fred_series, start_date = "2000-01-01")
 
-# 2) Yahoo futures
+# 2) Yahoo futures (2 series)
 yf_long   <- get_yahoo_close(yf_futures)
 
-# 3) Combined LONG (this is your final macro_long)
+# 3) Combined LONG (this is your final macro_long with 6 series)
 macro_long <- bind_rows(fred_long, yf_long)
 
 # 4) Combined WIDE (this is your final macro_wide)
-# 4) Combined WIDE (one row per date; allow NAs)
 macro_wide <- macro_long %>%
   dplyr::select(date, series, value) %>%     # <- drop `source`
   dplyr::distinct() %>%                      # guard against accidental dups
@@ -117,11 +91,4 @@ macro_wide <- macro_long %>%
 
 # Done:
 #   - macro_long: date, series, value, source (FRED or YF)
-#   - macro_wide: date + one column per series (FRED + futures)
-
-
-
-
-
-
-
+#   - macro_wide: date + one column per series (Core 6)
