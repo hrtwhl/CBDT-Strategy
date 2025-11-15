@@ -312,4 +312,3 @@ is.numeric(coredata(results_xts))  # TRUE
 # now call the function
 table.AnnualizedReturns(results_xts)
 charts.PerformanceSummary(results_xts)
-
