@@ -13,7 +13,7 @@ invisible(lapply(required, library, character.only = TRUE))
 source("APIKey.R")
 
 # =========================================================
-# FRED SERIES
+# FRED SERIES (CORRECTED - CORE 6 ONLY)
 # =========================================================
 fred_series <- c(
   # 1) USD & FX
@@ -46,7 +46,7 @@ fred_series <- c(
   # 6) U.S. Real Activity & Inflation
   industrial_prod   = "INDPRO",
   #nonfarm_payrolls  = "PAYEMS",
-  unemployment_rate = "UNRATE",
+  unemployment_rate = "UNRATE"
   #initial_claims    = "ICSA",
   #continuing_claims = "CCSA",
   #real_retail_sales = "RRSFS",
@@ -118,9 +118,6 @@ macro_wide <- macro_long %>%
 # Done:
 #   - macro_long: date, series, value, source (FRED or YF)
 #   - macro_wide: date + one column per series (FRED + futures)
-
-
-
 
 
 

@@ -4,7 +4,7 @@ source("2_getMacroData.R")
 #rm(list=setdiff(ls(), c("assets_long", "assets_wide", "macro_long", "macro_wide", "etfs")))
 
 
-# --- Step 1: Data Pre-processing (The Weekly "Master Table") ---
+# --- Step 1: Data Pre-processing (The Monthly "Master Table") ---
 
 # 1.1 Load necessary libraries
 # (Many are loaded by the source scripts, but explicitly loading is safer)
@@ -22,18 +22,19 @@ end_date <- max(max(assets_wide$date), max(macro_wide$date))
 # the mixed-frequency macro data correctly.
 daily_grid <- tibble(date = seq.Date(from = start_date, to = end_date, by = "day"))
 
-# Create our target WEEKLY grid (Fridays only).
-# This will be the "index" of our final master table.
-weekly_grid_fridays <- daily_grid %>%
-  filter(wday(date, label = TRUE) == "Fri") %>%
-  select(date)
+# Create our target MONTHLY grid (last trading day of month)
+# We use assets_wide to ensure we only get trading days.
+monthly_grid <- assets_wide %>%
+  select(date) %>%
+  mutate(month_year = floor_date(date, "month")) %>%
+  group_by(month_year) %>%
+  summarize(date = max(date), .groups = "drop") %>%
+  select(date) # This is our new grid
 
 cat("--- Date Grids Created --- \n")
 cat("Daily grid:", min(daily_grid$date), "to", max(daily_grid$date), "\n")
-cat("Weekly (Fri) grid:", min(weekly_grid_fridays$date), "to", max(weekly_grid_fridays$date), "\n")
-cat("Total Fridays:", nrow(weekly_grid_fridays), "\n\n")
-
-
+cat("Monthly (Last Trading Day) grid:", min(monthly_grid$date), "to", max(monthly_grid$date), "\n")
+cat("Total Months:", nrow(monthly_grid), "\n\n")
 
 
 # 1.3 Process Macro Data (Point-in-Time)
@@ -51,27 +52,27 @@ macro_daily_filled <- daily_grid %>%
   # This carries the last known value forward.
   fill(everything(), .direction = "down") %>%
   # Now that we have a complete, point-in-time DAILY macro table,
-  # we sample it on our target Fridays.
-  right_join(weekly_grid_fridays, by = "date")
+  # we sample it on our target monthly grid.
+  right_join(monthly_grid, by = "date")
 
 cat("--- Macro Data Processed --- \n")
-cat("Dimensions of filled macro data (Fridays):", dim(macro_daily_filled), "\n\n")
+cat("Dimensions of filled macro data (Monthly):", dim(macro_daily_filled), "\n\n")
 
 
-# 1.4 Process Asset Data (Weekly)
-# This is much easier. We just need the asset prices on our target Fridays.
-assets_weekly_fridays <- assets_wide %>%
-  right_join(weekly_grid_fridays, by = "date")
+# 1.4 Process Asset Data (Monthly)
+# This is much easier. We just need the asset prices on our target month-end dates.
+assets_monthly <- assets_wide %>%
+  right_join(monthly_grid, by = "date")
 
 cat("--- Asset Data Processed --- \n")
-cat("Dimensions of asset data (Fridays):", dim(assets_weekly_fridays), "\n\n")
+cat("Dimensions of asset data (Monthly):", dim(assets_monthly), "\n\n")
 
 
-# 1.5 Combine into Weekly Master Table
+# 1.5 Combine into Monthly Master Table
 # We use an inner_join to ensure we only keep dates
 # where we have *both* asset and (filled) macro data.
-master_table_weekly <- inner_join(
-  assets_weekly_fridays,
+master_table_monthly <- inner_join(
+  assets_monthly,
   macro_daily_filled,
   by = "date"
 ) %>%
@@ -84,20 +85,18 @@ master_table_weekly <- inner_join(
 
 # 1.6 Final Check
 # Let's inspect the result.
-cat("--- Weekly Master Table --- \n")
-cat("Final Dimensions:", dim(master_table_weekly), "\n")
-cat("Final Date Range:", as.character(min(master_table_weekly$date)),
-    "to", as.character(max(master_table_weekly$date)), "\n")
+cat("--- Monthly Master Table --- \n")
+cat("Final Dimensions:", dim(master_table_monthly), "\n")
+cat("Final Date Range:", as.character(min(master_table_monthly$date)),
+    "to", as.character(max(master_table_monthly$date)), "\n")
 cat("Head:\n")
-print(head(master_table_weekly[, 1:8])) # Print first 8 columns for brevity
+print(head(master_table_monthly[, 1:8])) # Print first 8 columns for brevity
 cat("\nTail:\n")
-print(tail(master_table_weekly[, 1:8]))
+print(tail(master_table_monthly[, 1:8]))
 
 # Save the master table for the next step
-save(master_table_weekly, file = "master_table_weekly.RData")
+save(master_table_monthly, file = "master_table_monthly.RData")
 
-cat("\n\nStep 1 Complete. 'master_table_weekly' is ready and saved.\n")
-
-
+cat("\n\nStep 1 Complete. 'master_table_monthly' is ready and saved.\n")
 
 

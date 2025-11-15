@@ -7,8 +7,6 @@
 # applies a sizing logic, calculates daily returns,
 # and deducts transaction costs.
 #
-# It answers the question: "Did this strategy work?"
-#
 # =========================================================
 
 # --- 1. Load Data and Libraries ---
@@ -22,17 +20,15 @@ if (length(to_install)) install.packages(to_install)
 invisible(lapply(required, library, character.only = TRUE))
 
 # Load our core engine signals
-load("final_backtest_signals.RData")
-# Load daily price data
-load("master_table_weekly.RData") # This is misnamed, it's from 3_ProcessData
-# Let's reload the *actual* daily prices from script 1
-# This is safer, as we need all trading days.
+load("final_backtest_signals_monthly.RData") # <-- CHANGED
+
+# Load daily price data from script 1
 daily_prices_wide <- assets_wide
 daily_prices_long <- assets_long
 rm(assets_wide, assets_long) # Clean up
 
 cat("--- Script 6: Portfolio Backtest --- \n")
-cat("Loaded 'final_backtest_signals' with", nrow(final_backtest_signals), "rows.\n")
+cat("Loaded 'final_backtest_signals_monthly' with", nrow(final_backtest_signals), "rows.\n")
 cat("Loaded daily prices with", nrow(daily_prices_wide), "rows.\n\n")
 
 
@@ -56,25 +52,15 @@ cat("Benchmark:", config$benchmark_ticker, "\n\n")
 # =========================================================
 # --- 3. Prepare Signals (Monthly Rebalance) ---
 #
-# You trade monthly. We will get the signal from the
-# *last Friday of each month* to simulate you
-# running the engine at month-end.
+# This is now much simpler. The signal file is already
+# the correct monthly decision points.
 # =========================================================
 
-# 3.1 Get month-end Friday signals
-monthly_signals <- final_backtest_signals %>%
-  mutate(month_year = floor_date(date, "month")) %>%
-  group_by(month_year, asset) %>%
-  # Get the last signal from that month
-  filter(date == max(date)) %>%
-  ungroup() %>%
-  select(date, asset, signal, blended_confidence)
-
-cat("Filtered weekly signals down to", nrow(monthly_signals), "monthly decision points.\n")
+cat("Using monthly signals directly for rebalancing.\n")
 
 # 3.2 Calculate Target Weights (Confidence-Weighted)
 # Here we implement the "confidence-weighted" sizing.
-target_weights <- monthly_signals %>%
+target_weights <- final_backtest_signals %>%
   # Only "Alive" assets get a weight
   filter(signal == "Alive") %>%
   group_by(date) %>%
@@ -97,9 +83,12 @@ cat("Calculated target portfolio weights for", nrow(target_weights), "rebalance 
 # =========================================================
 
 # 4.1 Calculate Daily Returns for all assets
+# Get all asset names present in the target_weights
+all_assets_in_backtest <- colnames(target_weights)[-1]
+
 daily_returns <- daily_prices_wide %>%
   # Ensure assets are in the same order as target_weights
-  select(date, all_of(colnames(target_weights)[-1])) %>%
+  select(date, all_of(all_assets_in_backtest)) %>%
   arrange(date) %>%
   mutate(
     across(
@@ -136,9 +125,6 @@ cat("Created daily holdings table.\n")
 
 # =========================================================
 # --- 5. Run Vectorized Backtest ---
-#
-# This is a professional-grade, vectorized backtest.
-# We avoid loops for speed.
 # =========================================================
 
 # 5.1 Align returns and holdings
@@ -259,7 +245,7 @@ equity_curve <- results %>%
 # 7.2 Create ggplot
 equity_plot <- ggplot(equity_curve, aes(x = date, y = CumulativeReturn, color = Portfolio)) +
   geom_line(linewidth = 1) +
-  #scale_y_log10() + # Log scale is best for long-term charts
+  scale_y_log10() + # Log scale is best for long-term charts
   labs(
     title = "Strategy vs. Benchmark (EUNM) - Log Scale",
     x = "Date",
@@ -290,26 +276,15 @@ cat("Performance metrics saved to 'final_performance_metrics.csv'.\n")
 cat("\n\n--- Script 6 Complete --- \n")
 
 
-
-
-
+# (Optional: PerformanceAnalytics code remains the same)
 library(xts)
 library(dplyr)
 library(PerformanceAnalytics)
 
-# assuming 'results' is your tibble shown above
-# make sure date is Date class
 results <- results %>% mutate(date = as.Date(date))
-
-# convert to xts excluding the date column
 results_xts <- xts::xts(select(results, -date) %>% as.data.frame() %>% as.matrix(),
                         order.by = results$date)
-
-# sanity checks
-class(results_xts)    # should include "xts" "zoo"
-is.numeric(coredata(results_xts))  # TRUE
 
 # now call the function
 table.AnnualizedReturns(results_xts)
 charts.PerformanceSummary(results_xts)
-

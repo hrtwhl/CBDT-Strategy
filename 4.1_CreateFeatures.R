@@ -1,11 +1,10 @@
-
 # Script that adds standardized price data for charts in later run live
 
 # =========================================================
 # SCRIPT 4: CREATE FEATURE FINGERPRINTS
 #
 # PURPOSE:
-# This script transforms the raw weekly master table into
+# This script transforms the raw monthly master table into
 # the "feature vector" (or "fingerprint") for each asset
 # at each point in time. This is the core input for
 # the analogue-finding engine (Script 5).
@@ -19,7 +18,7 @@ rm(list=setdiff(ls(), c("assets_long", "assets_wide", "macro_long", "macro_wide"
 
 source("1_getETFData.R")
 source("2_getMacroData.R")
-load("master_table_weekly.RData")
+load("master_table_monthly.RData") # <-- CHANGED TO MONTHLY
 
 # Load necessary libraries
 required <- c("dplyr", "tidyr", "slider", "purrr")
@@ -28,39 +27,40 @@ if (length(to_install)) install.packages(to_install)
 invisible(lapply(required, library, character.only = TRUE))
 
 cat("--- Script 4: Create Features --- \n")
-cat("Loaded 'master_table_weekly' with", nrow(master_table_weekly), "rows.\n\n")
+cat("Loaded 'master_table_monthly' with", nrow(master_table_monthly), "rows.\n\n")
 
 # =========================================================
-# --- 2. Configuration & Parameter Decisions ---
+# --- 2. Configuration & Parameter Decisions (MONTHLY) ---
 # =========================================================
 
 config <- list(
-  # --- Price Dynamics Lookbacks (in weeks) ---
-  price_mom_lookbacks = c(12, 52),
-  price_vol_lookbacks = 52,
-  price_dd_lookback = 52,
+  # --- Price Dynamics Lookbacks (in MONTHS) ---
+  price_mom_lookbacks = c(3, 12),      # 3-month & 12-month momentum
+  price_vol_lookbacks = 12,           # 12-month volatility
+  price_dd_lookback = 12,             # 12-month max drawdown
   
-  # --- NEW: Price Z-Score Lookback ---
-  # This will be our "standardized price path"
-  price_zscore_lookback = 52,
+  # --- Price Z-Score Lookback (in MONTHS) ---
+  price_zscore_lookback = 12,         # 12-month Z-Score
 
-  # --- Macro Context Lookbacks (in weeks) ---
-  macro_chg_lookbacks = c(13, 52),
+  # --- Macro Context Lookbacks (in MONTHS) ---
+  macro_chg_lookbacks = c(3, 12),      # 3-month & 12-month change
 
-  # --- Standardization ---
-  zscore_rolling_window = 156
+  # --- Standardization (in MONTHS) ---
+  # 156 weeks = 3 years. 3 years = 36 months.
+  zscore_rolling_window = 36
 )
 
-cat("--- Configuration --- \n")
-cat("Price Momentum Lookbacks:", config$price_mom_lookbacks, "\n")
-cat("Macro Change Lookbacks:", config$macro_chg_lookbacks, "\n")
-cat("Z-Score Rolling Window:", config$zscore_rolling_window, "weeks\n\n")
+
+cat("--- Configuration (Monthly) --- \n")
+cat("Price Momentum Lookbacks:", config$price_mom_lookbacks, "months\n")
+cat("Macro Change Lookbacks:", config$macro_chg_lookbacks, "months\n")
+cat("Z-Score Rolling Window:", config$zscore_rolling_window, "months\n\n")
 
 
 # Get asset and macro ticker lists for processing
 asset_tickers <- etfs$asset
 macro_tickers <- setdiff(
-  colnames(master_table_weekly),
+  colnames(master_table_monthly), # <-- CHANGED
   c("date", asset_tickers)
 )
 cat("Identified", length(macro_tickers), "macro tickers.\n")
@@ -70,8 +70,8 @@ cat("Identified", length(macro_tickers), "macro tickers.\n")
 # --- 3. Create Price Dynamics Features (Asset-Specific) ---
 # =========================================================
 
-# 3.1 Get 1-week log returns (base for volatility)
-price_data_long <- master_table_weekly %>%
+# 3.1 Get 1-month log returns (base for volatility)
+price_data_long <- master_table_monthly %>% # <-- CHANGED
   select(date, all_of(asset_tickers)) %>%
   pivot_longer(
     cols = -date,
@@ -81,7 +81,7 @@ price_data_long <- master_table_weekly %>%
   group_by(asset) %>%
   arrange(date) %>%
   mutate(
-    ret_1w = log(price) - lag(log(price), 1)
+    ret_1m = log(price) - lag(log(price), 1) # <-- This is now 1-month
   )
 
 # 3.2 Calculate features
@@ -91,7 +91,7 @@ price_features <- price_data_long %>%
     map_dfc(config$price_mom_lookbacks, ~ {
       set_names(
         list(price / lag(price, .x) - 1),
-        paste0("mom_", .x, "w")
+        paste0("mom_", .x, "m") # <-- Suffix changed to "m"
       )
     }),
 
@@ -99,32 +99,32 @@ price_features <- price_data_long %>%
     map_dfc(config$price_vol_lookbacks, ~ {
       set_names(
         list(
-          slider::slide_dbl(ret_1w, ~sd(.x, na.rm = TRUE), .before = .x - 1, .complete = TRUE)
+          slider::slide_dbl(ret_1m, ~sd(.x, na.rm = TRUE), .before = .x - 1, .complete = TRUE)
         ),
-        paste0("vol_", .x, "w")
+        paste0("vol_", .x, "m") # <-- Suffix changed to "m"
       )
     }),
 
     # --- Drawdown Feature ---
-    hi_n_week = slider::slide_dbl(price, ~max(.x, na.rm = TRUE), .before = config$price_dd_lookback - 1, .complete = TRUE),
-    drawdown = (price / hi_n_week) - 1,
+    hi_n_month = slider::slide_dbl(price, ~max(.x, na.rm = TRUE), .before = config$price_dd_lookback - 1, .complete = TRUE),
+    drawdown = (price / hi_n_month) - 1,
     
-    # --- NEW: Standardized Price Level (Z-Score) ---
+    # --- Standardized Price Level (Z-Score) ---
     # (price - rolling_mean) / rolling_sd
     price_roll_mean = slider::slide_dbl(price, ~mean(.x, na.rm = TRUE), .before = config$price_zscore_lookback - 1, .complete = TRUE),
     price_roll_sd = slider::slide_dbl(price, ~sd(.x, na.rm = TRUE), .before = config$price_zscore_lookback - 1, .complete = TRUE),
     
-    price_zscore_52w = (price - price_roll_mean) / price_roll_sd
+    price_zscore_12m = (price - price_roll_mean) / price_roll_sd
   ) %>%
   # Clean up intermediate columns
-  select(-price, -ret_1w, -hi_n_week, -price_roll_mean, -price_roll_sd) %>%
+  select(-price, -ret_1m, -hi_n_month, -price_roll_mean, -price_roll_sd) %>%
   # Handle Inf values from sd=0
-  mutate(price_zscore_52w = if_else(is.infinite(price_zscore_52w), 0, price_zscore_52w)) %>%
+  mutate(price_zscore_12m = if_else(is.infinite(price_zscore_12m), 0, price_zscore_12m)) %>%
   ungroup()
 
 cat("--- Price Dynamics Features --- \n")
 cat("Created", (length(config$price_mom_lookbacks) +
-                 length(config$price_vol_lookbacks) + 2), # +2 for drawdown & new zscore
+                 length(config$price_vol_lookbacks) + 2), # +2 for drawdown & zscore
     "price features for", length(asset_tickers), "assets.\n")
 
 
@@ -132,7 +132,7 @@ cat("Created", (length(config$price_mom_lookbacks) +
 # --- 4. Create Macro Context Features (Global) ---
 # =========================================================
 
-macro_features <- master_table_weekly %>%
+macro_features <- master_table_monthly %>% # <-- CHANGED
   select(date, all_of(macro_tickers))
 
 # 4.1 Calculate Macro Changes
@@ -143,10 +143,9 @@ macro_changes <- map(config$macro_chg_lookbacks, ~ {
     mutate(
       across(everything(),
              ~ .x - lag(.x, lookback),
-             .names = "{.col}_chg_{lookback}w")
+             .names = "{.col}_chg_{lookback}m") # <-- Suffix changed to "m"
     ) %>%
-    # --- !! FIX !! ---
-    select(ends_with(paste0("_chg_", lookback, "w")))
+    select(ends_with(paste0("_chg_", lookback, "m"))) # <-- Suffix changed to "m"
 }) %>%
   bind_cols() 
 
@@ -177,7 +176,7 @@ cat("Date Range:", as.character(min(feature_table_unstandardized$date)),
 
 # 5.2 Standardize (Rolling Z-Score)
 # Helper function for rolling Z-score
-rolling_zscore <- function(x, window_size = 156) {
+rolling_zscore <- function(x, window_size = 36) { # <-- Default changed
   rolling_mean <- slider::slide_dbl(
     x,
     ~mean(.x, na.rm = TRUE),
@@ -201,7 +200,7 @@ rolling_zscore <- function(x, window_size = 156) {
 }
 
 cat("--- Standardizing Features (Rolling Z-Score) --- \n")
-cat("Rolling window:", config$zscore_rolling_window, "weeks\n")
+cat("Rolling window:", config$zscore_rolling_window, "months\n")
 
 standardized_feature_table <- feature_table_unstandardized %>%
   group_by(asset) %>%
@@ -225,16 +224,15 @@ cat("Date Range:", as.character(min(standardized_feature_table$date)),
 # =========================================================
 save(
   standardized_feature_table,
-  file = "standardized_feature_table.RData"
+  file = "standardized_feature_table_monthly.RData"
 )
 save(
   feature_table_unstandardized,
-  file = "feature_table_unstandardized.RData"
+  file = "feature_table_unstandardized_monthly.RData"
 )
 
 cat(
   "--- Script 4 Complete --- \n",
-  "'standardized_feature_table.RData' and\n",
-  "'feature_table_unstandardized.RData' are saved.\n"
+  "'standardized_feature_table_monthly.RData' and\n",
+  "'feature_table_unstandardized_monthly.RData' are saved.\n"
 )
-

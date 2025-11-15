@@ -24,21 +24,17 @@ if (length(to_install)) install.packages(to_install)
 invisible(lapply(required, library, character.only = TRUE))
 
 # Load our feature fingerprints
-load("standardized_feature_table.RData")
+load("standardized_feature_table_monthly.RData") # <-- CHANGED
 # Load the raw master table (for calculating forward returns)
-load("master_table_weekly.RData")
+load("master_table_monthly.RData") # <-- CHANGED
 
-cat("--- Script 5: Analogue Engine --- \n")
+cat("--- Script 5: Analogue Engine (Monthly) --- \n")
 cat("Loaded 'standardized_feature_table' with", nrow(standardized_feature_table), "rows.\n")
-cat("Loaded 'master_table_weekly' with", nrow(master_table_weekly), "rows.\n\n")
+cat("Loaded 'master_table_monthly' with", nrow(master_table_monthly), "rows.\n\n")
 
 # =========================================================
-# --- 2. Configuration & Parameter Decisions ---
+# --- 2. Configuration & Parameter Decisions (MONTHLY) ---
 #
-# !! --- IMPORTANT DECISIONS --- !!
-# These parameters define the model's behavior and are
-# based on our interpretation of Heiden's articles.
-# Please review and confirm these.
 # =========================================================
 
 config <- list(
@@ -46,39 +42,35 @@ config <- list(
   k_analogues = 20, # Find the 20 "closest" historical analogues
   distance_metric = "Euclidean", # Standard distance measure
 
-  # --- Forward Horizons (Heiden is clear on this) ---
-  fwd_horizons_wks = c(4, 8, 12),
+  # --- Forward Horizons (in MONTHS) ---
+  fwd_horizons_months = c(1, 2, 3), # <-- CHANGED (1, 2, 3 months)
 
   # --- Blending Weights (!! KEY ASSUMPTION !!) ---
-  # "heavier emphasis on nearer horizons (4 > 8 > 12)"
-  # We'll use these to create a weighted "score"
+  # "heavier emphasis on nearer horizons (1 > 2 > 3)"
   blend_weights = c(0.5, 0.3, 0.2), # Sums to 1.0
 
   # --- "Alive/Dead" Gate Thresholds (!! KEY ASSUMPTION !!) ---
-  # To be "Alive", the signal must pass two tests:
-  # 1. Confidence: A weighted majority of analogues were positive.
   alive_gate_confidence = 0.60, # (e.g., 60%)
-  # 2. Magnitude: The weighted median return was meaningfully positive.
   alive_gate_magnitude = 0.0, # (e.g., > 0%)
 
-  # --- Backtest Timing ---
-  # We need a minimum history to find analogues
-  # 156 is 3 years, 104 is 2 years
-  min_history_wks = 156, 
-  #min_history_wks = 104,
+  # --- Backtest Timing (in MONTHS) ---
+  # 156 weeks = 3 years = 36 months
+  min_history_months = 36, # <-- CHANGED
+  
   # And a date to start the backtest (must be after
   # the first date in standardized_feature_table)
   backtest_start_date = as.Date("2010-01-01")
 )
+
 
 # Sanity check for weights
 if (sum(config$blend_weights) != 1.0) {
   warning("Blend weights do not sum to 1.0. Please check config.")
 }
 
-cat("--- Backtest Configuration --- \n")
+cat("--- Backtest Configuration (Monthly) --- \n")
 cat("K-Analogues:", config$k_analogues, "\n")
-cat("Horizons:", config$fwd_horizons_wks, "weeks\n")
+cat("Horizons:", config$fwd_horizons_months, "months\n")
 cat("Blend Weights:", config$blend_weights, "\n")
 cat("'Alive' Gate (Confidence): >", config$alive_gate_confidence, "\n")
 cat("'Alive' Gate (Magnitude): >", config$alive_gate_magnitude, "\n")
@@ -87,19 +79,15 @@ cat("Backtest Start Date:", as.character(config$backtest_start_date), "\n\n")
 
 # =========================================================
 # --- 3. Pre-Calculation: Forward Returns ---
-#
-# To speed up the loop, we'll pre-calculate all
-# future returns for all assets *once*.
-# This is a critical optimization.
 # =========================================================
 
 cat("--- Pre-calculating forward returns... --- \n")
 
 # Get a wide table of prices
-price_table_wide <- master_table_weekly %>%
+price_table_wide <- master_table_monthly %>% # <-- CHANGED
   select(date, all_of(etfs$asset))
 
-# Calculate all forward returns
+# Calculate all forward returns (1, 2, 3 MONTHS)
 fwd_returns_table <- price_table_wide %>%
   pivot_longer(
     cols = -date,
@@ -108,13 +96,13 @@ fwd_returns_table <- price_table_wide %>%
   ) %>%
   group_by(asset) %>%
   arrange(date) %>%
-  # Use `lead()` to get *future* prices
+  # Use `lead()` to get *future* prices (1, 2, 3 months)
   mutate(
-    fwd_ret_4w = (lead(price, 4) / price) - 1,
-    fwd_ret_8w = (lead(price, 8) / price) - 1,
-    fwd_ret_12w = (lead(price, 12) / price) - 1
+    fwd_ret_1m = (lead(price, 1) / price) - 1, # <-- CHANGED
+    fwd_ret_2m = (lead(price, 2) / price) - 1, # <-- CHANGED
+    fwd_ret_3m = (lead(price, 3) / price) - 1  # <-- CHANGED
   ) %>%
-  select(date, asset, fwd_ret_4w, fwd_ret_8w, fwd_ret_12w) %>%
+  select(date, asset, fwd_ret_1m, fwd_ret_2m, fwd_ret_3m) %>% # <-- CHANGED
   ungroup() %>%
   na.omit() # Remove NAs from the end of the series
 
@@ -123,8 +111,6 @@ cat("Forward returns table calculated.\n\n")
 
 # =========================================================
 # --- 4. The Analogue Engine: Main Backtest Loop ---
-#
-# This loop will be slow. We use a progress bar.
 # =========================================================
 
 # Get all unique assets and features
@@ -164,38 +150,30 @@ for (t_idx in seq_along(all_test_dates)) {
     pb$tick() # Update progress bar
 
     # 1. GET "TODAY'S" FINGERPRINT
-    # We need this as a matrix (1 row) for distance calculation
     today_fingerprint_tbl <- standardized_feature_table %>%
       filter(date == today_date, asset == current_asset)
-
-    # Skip if this asset doesn't have a fingerprint for this day
     if (nrow(today_fingerprint_tbl) == 0) next
-
     today_fingerprint_matrix <- today_fingerprint_tbl %>%
       select(all_of(all_feature_names)) %>%
       as.matrix()
 
     # 2. GET "HISTORY'S" FINGERPRINTS
-    # Get all fingerprints for this asset *before* today
     history_fingerprints_tbl <- standardized_feature_table %>%
       filter(asset == current_asset, date < today_date)
 
     # Skip if we don't have enough history
-    if (nrow(history_fingerprints_tbl) < config$min_history_wks) next
+    if (nrow(history_fingerprints_tbl) < config$min_history_months) next # <-- CHANGED
 
     history_fingerprints_matrix <- history_fingerprints_tbl %>%
       select(all_of(all_feature_names)) %>%
       as.matrix()
 
     # 3. CALCULATE DISTANCE
-    # This is the core "similarity" search
     distances <- proxy::dist(
       x = today_fingerprint_matrix,
       y = history_fingerprints_matrix,
       method = config$distance_metric
     )
-    
-    # Add distances to history table
     history_with_dist <- history_fingerprints_tbl %>%
       mutate(distance = as.vector(distances))
 
@@ -205,44 +183,41 @@ for (t_idx in seq_along(all_test_dates)) {
       slice_head(n = config$k_analogues)
 
     # 5. GET FORWARD RETURNS FOR THESE ANALOGUES
-    # We join our pre-calculated table for speed
     analogue_fwd_returns <- top_k_analogues %>%
       inner_join(
         fwd_returns_table,
         by = c("date", "asset")
       )
-
-    # Skip if we couldn't find fwd returns (shouldn't happen, but safe)
     if (nrow(analogue_fwd_returns) < config$k_analogues) next
 
     # 6. BLEND & APPLY "ALIVE/DEAD" GATE
     
-    # Calculate stats for each horizon
-    stats_4w <- analogue_fwd_returns %>%
+    # Calculate stats for each horizon (1m, 2m, 3m)
+    stats_1m <- analogue_fwd_returns %>%
       summarise(
-        median_ret = median(fwd_ret_4w, na.rm = TRUE),
-        pct_pos = mean(fwd_ret_4w > 0, na.rm = TRUE)
+        median_ret = median(fwd_ret_1m, na.rm = TRUE),
+        pct_pos = mean(fwd_ret_1m > 0, na.rm = TRUE)
       )
-    stats_8w <- analogue_fwd_returns %>%
+    stats_2m <- analogue_fwd_returns %>%
       summarise(
-        median_ret = median(fwd_ret_8w, na.rm = TRUE),
-        pct_pos = mean(fwd_ret_8w > 0, na.rm = TRUE)
+        median_ret = median(fwd_ret_2m, na.rm = TRUE),
+        pct_pos = mean(fwd_ret_2m > 0, na.rm = TRUE)
       )
-    stats_12w <- analogue_fwd_returns %>%
+    stats_3m <- analogue_fwd_returns %>%
       summarise(
-        median_ret = median(fwd_ret_12w, na.rm = TRUE),
-        pct_pos = mean(fwd_ret_12w > 0, na.rm = TRUE)
+        median_ret = median(fwd_ret_3m, na.rm = TRUE),
+        pct_pos = mean(fwd_ret_3m > 0, na.rm = TRUE)
       )
 
     # Blend the stats using our config weights
     w <- config$blend_weights
-    blended_median_ret = (stats_4w$median_ret * w[1]) +
-                         (stats_8w$median_ret * w[2]) +
-                         (stats_12w$median_ret * w[3])
+    blended_median_ret = (stats_1m$median_ret * w[1]) +
+                         (stats_2m$median_ret * w[2]) +
+                         (stats_3m$median_ret * w[3])
     
-    blended_confidence = (stats_4w$pct_pos * w[1]) +
-                         (stats_8w$pct_pos * w[2]) +
-                         (stats_12w$pct_pos * w[3])
+    blended_confidence = (stats_1m$pct_pos * w[1]) +
+                         (stats_2m$pct_pos * w[2]) +
+                         (stats_3m$pct_pos * w[3])
 
     # Apply the "Alive/Dead" filter
     is_alive <- (blended_confidence > config$alive_gate_confidence) &
@@ -264,7 +239,7 @@ for (t_idx in seq_along(all_test_dates)) {
 
 cat("\n--- Backtest Loop Complete --- \n")
 
-# =T========================================================
+# =========================================================
 # --- 5. Collate and Save Results ---
 # =========================================================
 
@@ -280,17 +255,16 @@ if (nrow(final_backtest_signals) > 0) {
   # Save the results
   save(
     final_backtest_signals,
-    file = "final_backtest_signals.RData"
+    file = "final_backtest_signals_monthly.RData" # <-- CHANGED
   )
   
   cat("\n\n--- Script 5 Complete --- \n")
-  cat("'final_backtest_signals.RData' has been saved.\n")
+  cat("'final_backtest_signals_monthly.RData' has been saved.\n")
   
 } else {
   cat("--- ERROR --- \n")
   cat("No signals were generated. This might be due to:\n")
   cat("1. 'backtest_start_date' being too late.\n")
-  cat("2. 'min_history_wks' being too large.\n")
+  cat("2. 'min_history_months' being too large.\n")
   cat("3. No assets having data.\n")
 }
-
